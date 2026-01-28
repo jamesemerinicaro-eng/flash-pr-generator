@@ -291,6 +291,58 @@ def after_request(response):
     response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
     return response
 
+@app.route("/generate-questions", methods=["POST"])
+def generate_questions():
+    try:
+        data = request.get_json(silent=True) or {}
+        description = data.get("description", "").strip()
+
+        if not description:
+            return jsonify({"error": "Description is required"}), 400
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You generate survey questions in JSON format."
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+Return ONLY valid JSON like this:
+[
+  {{
+    "question": "Question text",
+    "type": "short answer | multiple choice | dropdown | linear",
+    "options": ["Option 1", "Option 2"]
+  }}
+]
+
+Generate 5 survey questions based on:
+{description}
+"""
+                }
+            ]
+        )
+
+        ai_text = response.choices[0].message.content.strip()
+
+        start = ai_text.find("[")
+        end = ai_text.rfind("]")
+
+        if start == -1 or end == -1:
+            return jsonify({"questions": []})
+
+        questions = json.loads(ai_text[start:end + 1])
+
+        return jsonify({"questions": questions})
+
+    except Exception as e:
+        print("generate-questions error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 
 # -----------------------------------------------------------
 # 🚀 Run locally / deploy
