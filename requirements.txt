@@ -1,0 +1,7 @@
+Flask
+flask-cors
+openai
+requests
+python-docx
+beautifulsoup4
+gunicorn
